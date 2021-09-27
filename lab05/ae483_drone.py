@@ -461,7 +461,7 @@ class Simulator:
             yaw = (eul[2] * 180 / np.pi) - 90 + self.camera_yaw
         else:
             pos = self.camera_target
-            yaw = self.camera_yaw
+            yaw = -90 + self.camera_yaw
         view_matrix = pybullet.computeViewMatrixFromYawPitchRoll(pos, self.camera_distance, yaw, -self.camera_pitch, 0., 2)
         projection_matrix = pybullet.computeProjectionMatrixFOV(fov=120, aspect=1.0, nearVal=0.01, farVal=100.0)
         im = pybullet.getCameraImage(self.width, self.height, viewMatrix=view_matrix, projectionMatrix=projection_matrix, renderer=pybullet.ER_BULLET_HARDWARE_OPENGL, shadow=1)
