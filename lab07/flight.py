@@ -8,9 +8,7 @@ from cflib.crazyflie.log import LogConfig
 
 # Specify the uri of the drone to which we want to connect (if your radio
 # channel is X, the uri should be 'radio://0/X/2M/E7E7E7E7E7')
-# uri = 'radio://0/0/2M/E7E7E7E7E7'
-# FIXME
-uri = 'radio://0/80/2M/E7E7E7E7E7'
+uri = 'radio://0/0/2M/E7E7E7E7E7'
 
 # Specify the variables we want to log (all at 100 Hz)
 variables = [
@@ -128,7 +126,7 @@ class SimpleClient:
         while time.time() - start_time < dt:
             self.cf.commander.send_position_setpoint(x, y, z, yaw)
             time.sleep(0.1)
-    
+
     def move_smooth(self, p1, p2, yaw, dt):
         print(f'Move smoothly from {p1} to {p2} with yaw {yaw} degrees in {dt} seconds')
         p1 = np.array(p1)
