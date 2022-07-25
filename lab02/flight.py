@@ -8,7 +8,7 @@ from cflib.crazyflie.log import LogConfig
 
 # Specify the uri of the drone to which we want to connect (if your radio
 # channel is X, the uri should be 'radio://0/X/2M/E7E7E7E7E7')
-uri = 'radio://0/0/2M/E7E7E7E7E7'
+uri = 'radio://0/80/2M/E7E7E7E7E7'
 
 # Specify the variables we want to log (all at 100 Hz)
 variables = [
@@ -54,10 +54,13 @@ class SimpleClient:
         self.cf.connected.add_callback(self.connected)
         self.cf.connection_failed.add_callback(self.connection_failed)
         self.cf.connection_lost.add_callback(self.connection_lost)
+        #need to check if fully_connected for modifying the parameters
+        self.cf.fully_connected.add_callback(self.fully_connected)
         self.cf.disconnected.add_callback(self.disconnected)
         print(f'Connecting to {uri}')
         self.cf.open_link(uri)
         self.is_connected = False
+        self.is_fully_connected = False
         self.data = {}
 
     def connected(self, uri):
@@ -90,7 +93,13 @@ class SimpleClient:
                 for v in logconf.variables:
                     print(f' - {v.name}')
 
+    def fully_connected(self, link_uri):
+        """This callback is called when the Crazyflie has been connected and all parameters have been
+        downloaded. It is now OK to set and get parameters."""
+        print(f'Parameters downloaded to {link_uri}')
+
         # Reset the stock EKF
+        self.is_fully_connected = True
         self.cf.param.set_value('kalman.resetEstimation', 1)
 
         # Enable the controller (1 for stock controller, 4 for ae483 controller)
@@ -151,12 +160,12 @@ if __name__ == '__main__':
 
     # Create and start the client that will connect to the drone
     client = SimpleClient(uri, use_controller=False, use_observer=False)
-    while not client.is_connected:
+    while not client.is_fully_connected:
         print(f' ... connecting ...')
         time.sleep(1.0)
 
     # Leave a little time at the start to initialize
-    client.stop(1.0)
+    client.stop(2.0)
 
     # Take off
     client.move(0.0, 0.0, 0.3, 2.0)
