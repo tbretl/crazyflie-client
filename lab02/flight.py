@@ -8,7 +8,7 @@ from cflib.crazyflie.log import LogConfig
 
 # Specify the uri of the drone to which we want to connect (if your radio
 # channel is X, the uri should be 'radio://0/X/2M/E7E7E7E7E7')
-uri = 'radio://0/80/2M/E7E7E7E7E7'
+uri = 'radio://0/0/2M/E7E7E7E7E7'
 
 # Specify the variables we want to log (all at 100 Hz)
 variables = [
@@ -67,6 +67,10 @@ class SimpleClient:
         print(f'Connected to {uri}')
         self.is_connected = True
 
+    def fully_connected(self, link_uri):
+        """This callback is called when the Crazyflie has been connected and all parameters have been
+        downloaded. It is now OK to set and get parameters."""
+        print(f'Parameters downloaded to {link_uri}')
         # Start logging
         self.logconfs = []
         self.logconfs.append(LogConfig(name=f'LogConf0', period_in_ms=10))
@@ -92,11 +96,6 @@ class SimpleClient:
                 print(f'Could not start {logconf.name} because of bad configuration')
                 for v in logconf.variables:
                     print(f' - {v.name}')
-
-    def fully_connected(self, link_uri):
-        """This callback is called when the Crazyflie has been connected and all parameters have been
-        downloaded. It is now OK to set and get parameters."""
-        print(f'Parameters downloaded to {link_uri}')
 
         # Reset the stock EKF
         self.is_fully_connected = True
