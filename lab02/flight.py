@@ -71,6 +71,23 @@ class SimpleClient:
         """This callback is called when the Crazyflie has been connected and all parameters have been
         downloaded. It is now OK to set and get parameters."""
         print(f'Parameters downloaded to {link_uri}')
+        # Reset the stock EKF
+        self.is_fully_connected = True
+        self.cf.param.set_value('kalman.resetEstimation', 1)
+
+        # Enable the controller (1 for stock controller, 4 for ae483 controller)
+        if self.use_controller:
+            self.cf.param.set_value('stabilizer.controller', 4)
+        else:
+            self.cf.param.set_value('stabilizer.controller', 1)
+
+        # Enable the observer (0 for disable, 1 for enable)
+        if self.use_observer:
+            self.cf.param.set_value('ae483par.use_observer', 1)
+        else:
+            self.cf.param.set_value('ae483par.use_observer', 0)
+
+        time.sleep(1)
         # Start logging
         self.logconfs = []
         self.logconfs.append(LogConfig(name=f'LogConf0', period_in_ms=10))
@@ -96,22 +113,6 @@ class SimpleClient:
                 print(f'Could not start {logconf.name} because of bad configuration')
                 for v in logconf.variables:
                     print(f' - {v.name}')
-
-        # Reset the stock EKF
-        self.is_fully_connected = True
-        self.cf.param.set_value('kalman.resetEstimation', 1)
-
-        # Enable the controller (1 for stock controller, 4 for ae483 controller)
-        if self.use_controller:
-            self.cf.param.set_value('stabilizer.controller', 4)
-        else:
-            self.cf.param.set_value('stabilizer.controller', 1)
-
-        # Enable the observer (0 for disable, 1 for enable)
-        if self.use_observer:
-            self.cf.param.set_value('ae483par.use_observer', 1)
-        else:
-            self.cf.param.set_value('ae483par.use_observer', 0)
 
     def connection_failed(self, uri, msg):
         print(f'Connection to {uri} failed: {msg}')
