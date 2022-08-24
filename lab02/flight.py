@@ -69,8 +69,10 @@ class SimpleClient:
         # Enable the controller (1 for stock controller, 4 for ae483 controller)
         if self.use_controller:
             self.cf.param.set_value('stabilizer.controller', 4)
+            self.cf.param.set_value('powerDist.motorSetEnable', 1)
         else:
             self.cf.param.set_value('stabilizer.controller', 1)
+            self.cf.param.set_value('powerDist.motorSetEnable', 0)
 
         # Enable the observer (0 for disable, 1 for enable)
         if self.use_observer:
