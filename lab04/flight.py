@@ -129,11 +129,11 @@ class SimpleClient:
     def log_error(self, logconf, msg):
         print(f'Error when logging {logconf}: {msg}')
 
-    def move(self, x, y, z, dt):
-        print(f'Move to {x}, {y}, {z} for {dt} seconds')
+    def move(self, x, y, z, yaw, dt):
+        print(f'Move to {x}, {y}, {z} with yaw {yaw} degrees for {dt} seconds')
         start_time = time.time()
         while time.time() - start_time < dt:
-            self.cf.commander.send_position_setpoint(x, y, z, 0.0)
+            self.cf.commander.send_position_setpoint(x, y, z, yaw)
             time.sleep(0.1)
 
     def stop(self, dt):
