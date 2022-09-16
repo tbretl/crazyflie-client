@@ -153,7 +153,7 @@ if __name__ == '__main__':
     cflib.crtp.init_drivers()
 
     # Create and start the client that will connect to the drone
-    client = SimpleClient(uri, use_controller=False, use_observer=False)
+    client = SimpleClient(uri, use_controller=True, use_observer=False)
     while not client.is_fully_connected:
         time.sleep(0.1)
 
