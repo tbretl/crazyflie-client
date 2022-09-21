@@ -49,17 +49,38 @@ class SimpleClient:
         self.use_observer = use_observer
         self.cf = Crazyflie(rw_cache='./cache')
         self.cf.connected.add_callback(self.connected)
+        self.cf.fully_connected.add_callback(self.fully_connected)
         self.cf.connection_failed.add_callback(self.connection_failed)
         self.cf.connection_lost.add_callback(self.connection_lost)
         self.cf.disconnected.add_callback(self.disconnected)
         print(f'Connecting to {uri}')
         self.cf.open_link(uri)
-        self.is_connected = False
+        self.is_fully_connected = False
         self.data = {}
 
     def connected(self, uri):
         print(f'Connected to {uri}')
-        self.is_connected = True
+    
+    def fully_connected(self, uri):
+        print(f'Fully connected to {uri}')
+        self.is_fully_connected = True
+
+        # Reset the stock EKF
+        self.cf.param.set_value('kalman.resetEstimation', 1)
+
+        # Enable the controller (1 for stock controller, 4 for ae483 controller)
+        if self.use_controller:
+            self.cf.param.set_value('stabilizer.controller', 4)
+            self.cf.param.set_value('powerDist.motorSetEnable', 1)
+        else:
+            self.cf.param.set_value('stabilizer.controller', 1)
+            self.cf.param.set_value('powerDist.motorSetEnable', 0)
+
+        # Enable the observer (0 for disable, 1 for enable)
+        if self.use_observer:
+            self.cf.param.set_value('ae483par.use_observer', 1)
+        else:
+            self.cf.param.set_value('ae483par.use_observer', 0)
 
         # Start logging
         self.logconfs = []
@@ -87,21 +108,6 @@ class SimpleClient:
                 for v in logconf.variables:
                     print(f' - {v.name}')
 
-        # Reset the stock EKF
-        self.cf.param.set_value('kalman.resetEstimation', 1)
-
-        # Enable the controller (1 for stock controller, 4 for ae483 controller)
-        if self.use_controller:
-            self.cf.param.set_value('stabilizer.controller', 4)
-        else:
-            self.cf.param.set_value('stabilizer.controller', 1)
-
-        # Enable the observer (0 for disable, 1 for enable)
-        if self.use_observer:
-            self.cf.param.set_value('ae483par.use_observer', 1)
-        else:
-            self.cf.param.set_value('ae483par.use_observer', 0)
-
     def connection_failed(self, uri, msg):
         print(f'Connection to {uri} failed: {msg}')
 
@@ -110,7 +116,7 @@ class SimpleClient:
 
     def disconnected(self, uri):
         print(f'Disconnected from {uri}')
-        self.is_connected = False
+        self.is_fully_connected = False
 
     def log_data(self, timestamp, data, logconf):
         for v in logconf.variables:
@@ -148,11 +154,10 @@ if __name__ == '__main__':
 
     # Create and start the client that will connect to the drone
     client = SimpleClient(uri, use_controller=True, use_observer=False)
-    while not client.is_connected:
-        print(f' ... connecting ...')
-        time.sleep(1.0)
+    while not client.is_fully_connected:
+        time.sleep(0.1)
 
-    # Leave time at the start to initialize
+    # Leave a little time at the start to initialize
     client.stop(1.0)
 
     # Take off and hover (with zero yaw)
