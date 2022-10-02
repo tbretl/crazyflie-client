@@ -166,14 +166,19 @@ if __name__ == '__main__':
     # Take off and hover (with zero yaw)
     client.move(0.0, 0.0, 0.15, 0.0, 1.0)
     client.move_smooth([0.0, 0.0, 0.15], [0.0, 0.0, 0.5], 0.0, 0.2)
+    client.move(0.0, 0.0, 0.5, 0.0, 1.0)
 
     # Fly in a square
     client.move_smooth([0.0, 0.0, 0.5], [0.5, 0.0, 0.5], 0.0, 0.2)
+    client.move(0.5, 0.0, 0.5, 0.0, 1.0)
     client.move_smooth([0.5, 0.0, 0.5], [0.5, 0.5, 0.5], 0.0, 0.2)
+    client.move(0.5, 0.5, 0.5, 0.0, 1.0)
     client.move_smooth([0.5, 0.5, 0.5], [0.0, 0.5, 0.5], 0.0, 0.2)
+    client.move(0.0, 0.5, 0.5, 0.0, 1.0)
     client.move_smooth([0.0, 0.5, 0.5], [0.0, 0.0, 0.5], 0.0, 0.2)
-
+    
     # Go back to hover (with zero yaw) and prepare to land
+    client.move(0.0, 0.0, 0.5, 0.0, 1.0)
     client.move_smooth([0.0, 0.0, 0.5], [0.0, 0.0, 0.15], 0.0, 0.2)
     client.move(0.0, 0.0, 0.15, 0.0, 1.0)
 
