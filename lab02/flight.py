@@ -145,6 +145,22 @@ class SimpleClient:
         with open(filename, 'w') as outfile:
             json.dump(self.data, outfile, indent=4, sort_keys=False)
 
+    def set_params(self):
+        # Reset the stock EKF
+        self.cf.param.set_value('kalman.resetEstimation', 1)
+
+        # Enable the controller (1 for stock controller, 4 for ae483 controller)
+        if self.use_controller:
+            self.cf.param.set_value('stabilizer.controller', 4)
+        else:
+            self.cf.param.set_value('stabilizer.controller', 1)
+
+        # Enable the observer (0 for disable, 1 for enable)
+        if self.use_observer:
+            self.cf.param.set_value('ae483par.use_observer', 1)
+        else:
+            self.cf.param.set_value('ae483par.use_observer', 0)
+
 if __name__ == '__main__':
     # Initialize everything
     logging.basicConfig(level=logging.ERROR)
@@ -154,6 +170,9 @@ if __name__ == '__main__':
     client = SimpleClient(uri, use_controller=False, use_observer=False)
     while not client.is_fully_connected:
         time.sleep(0.1)
+
+    # Set parameters after the client is connected
+    client.set_params()
 
     # Leave a little time at the start to initialize
     client.stop(1.0)
