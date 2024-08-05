@@ -117,8 +117,9 @@ class SimpleClient:
         self.is_fully_connected = False
 
     def log_data(self, timestamp, data, logconf):
+        t_ms = time.time() * 1000
         for v in logconf.variables:
-            self.data[v.name]['time'].append(timestamp)
+            self.data[v.name]['time'].append(t_ms)
             self.data[v.name]['data'].append(data[v.name])
 
     def log_error(self, logconf, msg):
