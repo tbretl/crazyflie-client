@@ -300,7 +300,7 @@ if __name__ == '__main__':
     # Assemble flight data from both clients
     data = {}
     data['drone'] = drone_client.data
-    data['mocap'] = mocap_client.data if drone_client.use_qualisys else {}
+    data['mocap'] = mocap_client.data if use_mocap else {}
 
     # Write flight data to a file
     with open('hardware_data.json', 'w') as outfile:
