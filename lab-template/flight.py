@@ -143,7 +143,7 @@ class CrazyflieClient:
     
     def _log_data(self, timestamp, data, logconf):
         for v in logconf.variables:
-            self.data[v.name]['time'].append(timestamp)
+            self.data[v.name]['time'].append(timestamp / 1e3)
             self.data[v.name]['data'].append(data[v.name])
 
     def _log_error(self, logconf, msg):
