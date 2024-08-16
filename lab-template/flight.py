@@ -2,6 +2,7 @@
 # IMPORTS
 
 # Imports for crazyflie (the drone)
+import logging
 import time
 import json
 import numpy as np
@@ -15,6 +16,9 @@ import xml.etree.cElementTree as ET
 from threading import Thread
 import qtm_rt as qtm
 from scipy.spatial.transform import Rotation
+
+# Only output errors from the logging framework
+logging.basicConfig(level=logging.ERROR)
 
 
 ###################################
