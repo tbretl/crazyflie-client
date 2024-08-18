@@ -239,7 +239,7 @@ class QualisysClient(Thread):
         x, y, z = np.array(position) / 1e3
         
         # Get orientation of marker deck (yaw, pitch, roll in radians)
-        R = np.reshape(orientation.matrix, (3, -1), order='F')
+        R = Rotation.from_matrix(np.reshape(orientation.matrix, (3, -1), order='F'))
         yaw, pitch, roll = R.as_euler('zyx', degrees=False)
 
         # Store time, position, and orientation
