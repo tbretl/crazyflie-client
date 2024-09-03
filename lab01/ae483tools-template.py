@@ -91,8 +91,8 @@ def resample_data_mocap(raw_data, t, t_shift=0.):
     i_is_valid = np.argwhere(is_valid).flatten()
 
     # remove nan
-    for val in data.values():
-        val = val[i_is_valid]
+    for key, val in data.items():
+        data[key] = val[i_is_valid]
     
     # do time shift
     data['time'] -= (data['time'][0] - t_shift)
