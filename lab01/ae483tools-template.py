@@ -57,10 +57,10 @@ def resample_data_drone(raw_data, hz=1e2, t_min_offset=0., t_max_offset=0., only
     for key, val in data.items():
         resampled_data[key] = np.interp(t, val['time'], val['data'])
     
-    # truncate to times when o_z_des is positive
+    # truncate to times when p_z_des is positive
     if only_in_flight:
         i = []
-        for k in ['ae483log.o_z_des', 'ctrltarget.z']:
+        for k in ['ae483log.p_z_des', 'ctrltarget.z']:
             if k in resampled_data.keys():
                 j = np.argwhere(resampled_data[k] > 0).flatten()
                 if len(j) > len(i):
@@ -68,7 +68,7 @@ def resample_data_drone(raw_data, hz=1e2, t_min_offset=0., t_max_offset=0., only
         if len(i) < 2:
             raise Exception(
                 'Failed to get "only_in_flight" data.\n' + \
-                ' - Did you remember to log "ae483log.o_z_des" and was it ever positive?\n' + \
+                ' - Did you remember to log "ae483log.p_z_des" and was it ever positive?\n' + \
                 ' - Did you remember to log "ctrltarget.z" and was it ever positive?\n'
             )
         for key in resampled_data.keys():
