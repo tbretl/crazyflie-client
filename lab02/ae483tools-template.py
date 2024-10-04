@@ -10,7 +10,7 @@ def load_hardware_data(filename):
         return data['drone'], data['mocap']
     
 
-def resample_data_drone(raw_data, hz=1e2, t_min_offset=0., t_max_offset=0., only_in_flight=False):
+def resample_data_drone(raw_data, hz=1e2, t_min_offset=0., t_max_offset=0.):
     # copy data (FIXME: may be unnecessary?)
     data = {}
     for key, val in raw_data.items():
@@ -56,23 +56,6 @@ def resample_data_drone(raw_data, hz=1e2, t_min_offset=0., t_max_offset=0., only
     resampled_data = {'time': t}
     for key, val in data.items():
         resampled_data[key] = np.interp(t, val['time'], val['data'])
-    
-    # truncate to times when p_z_des is positive
-    if only_in_flight:
-        i = []
-        for k in ['ae483log.p_z_des', 'ctrltarget.z']:
-            if k in resampled_data.keys():
-                j = np.argwhere(resampled_data[k] > 0).flatten()
-                if len(j) > len(i):
-                    i = j
-        if len(i) < 2:
-            raise Exception(
-                'Failed to get "only_in_flight" data.\n' + \
-                ' - Did you remember to log "ae483log.p_z_des" and was it ever positive?\n' + \
-                ' - Did you remember to log "ctrltarget.z" and was it ever positive?\n'
-            )
-        for key in resampled_data.keys():
-            resampled_data[key] = resampled_data[key][i[0]:i[-1]]
         
     # return the resampled data
     return resampled_data
@@ -107,3 +90,63 @@ def resample_data_mocap(raw_data, t, t_shift=0.):
     return resampled_data
 
 
+def only_in_flight(data_drone, data_mocap=None, t_interval=None):
+    # Verify the desired z position was logged
+    if ('ae483log.p_z_des' not in data_drone.keys()) and ('ctrltarget.z' not in data_drone.keys()):
+        raise Exception('Neither "ae483log.p_z_des" or "ctrltarget.z" were logged.')
+    
+    # Find the indices at which the desired z position was positive
+    i = []
+    for k in ['ae483log.p_z_des', 'ctrltarget.z']:
+        if k in data_drone.keys():
+            j = np.argwhere(data_drone[k] > 0).flatten()
+            if len(j) > len(i):
+                i = j
+    
+    # Verify that there were indices at which the desired z position was positive
+    if len(i) < 2:
+        raise Exception('The desired z position was never positive.')
+    
+    # Get first and last index at which the desired z position was positive
+    i_first = i[0]
+    i_last = i[-1]
+
+    # Adjust the first and last index, if desired, to get a subset of data with
+    # a given length centered in the middle of the flight time (if desired)
+    if t_interval is not None:
+        # Get time step (assuming it is constant)
+        dt = data_drone['time'][1] - data_drone['time'][0]
+
+        # Get number of time steps that would correspond to desired time interval
+        n_interval = int(np.ceil(t_interval / dt))
+        n_flight = (i_last + 1) - i_first
+        
+        # Verify that we have at least that number of time steps
+        if n_flight < n_interval:
+            t_flight = n_flight * dt
+            raise Exception(f'The requested time interval ({t_interval:.2f} s) is longer than the flight time ({t_flight:.2f} s).')
+        
+        # Get first and last index again
+        i_first += int(np.floor((n_flight - n_interval) / 2))
+        i_last = i_first + n_interval
+
+    # Truncate and time-shift data_drone
+    for k in data_drone.keys():
+        data_drone[k] = data_drone[k][i_first:(i_last + 1)]
+    # data_drone['time'] -= data_drone['time'][0]
+    
+    # Truncate and time-shift data_mocap, if it exists
+    if data_mocap is not None:
+        # Verify mocap data actually exist
+        if len(data_mocap.keys()) == 0:
+            raise Exception('The dictionary "data_mocap" is empty.')
+
+        # Truncate mocap data
+        for k in data_mocap.keys():
+            data_mocap[k] = data_mocap[k][i_first:(i_last + 1)]
+
+        # Time-shift mocap data
+        data_mocap['time'] -= data_mocap['time'][0]
+
+        # Verify drone and mocap data are the same
+        assert(np.allclose(data_drone['time'], data_mocap['time']))
