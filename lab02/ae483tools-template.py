@@ -133,7 +133,7 @@ def only_in_flight(data_drone, data_mocap=None, t_interval=None):
     # Truncate and time-shift data_drone
     for k in data_drone.keys():
         data_drone[k] = data_drone[k][i_first:(i_last + 1)]
-    # data_drone['time'] -= data_drone['time'][0]
+    data_drone['time'] -= data_drone['time'][0]
     
     # Truncate and time-shift data_mocap, if it exists
     if data_mocap is not None:
