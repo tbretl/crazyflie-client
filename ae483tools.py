@@ -2,13 +2,33 @@ import json
 import numpy as np
 from pathlib import Path
 from scipy.spatial.transform import Rotation
+import matplotlib.pyplot as plt
 
 
 def load_hardware_data(filename):
     with open(Path(filename), 'r') as f:
         data = json.load(f)
         return data['drone'], data['mocap']
-    
+
+def check_mocap_coverage(filename):
+    # Load data
+    raw_data_drone, raw_data_mocap = load_hardware_data(filename)
+
+    # Compute statistics
+    how_many_timesteps = len(raw_data_mocap['z'])
+    how_many_dropouts = len(np.argwhere(np.isnan(raw_data_mocap['z'])).flatten())
+    percent_coverage = 100. * (1. - (how_many_dropouts / how_many_timesteps))
+    elapsed_time = raw_data_mocap['time'][-1] - raw_data_mocap['time'][0]
+    sample_rate = how_many_timesteps / elapsed_time
+
+    # Plot data (with relevant statistics in the title)
+    fig, ax = plt.subplots(1, 1, figsize=(7, 3), tight_layout=True)
+    ax.plot(raw_data_mocap['time'], raw_data_mocap['z'])
+    ax.set_xlabel('t (seconds)')
+    ax.set_ylabel('z (meters)')
+    ax.set_ylim(0., 1.)
+    ax.set_title(f'({filename}) Tracked {percent_coverage:.1f}% of {how_many_timesteps} time steps at about {sample_rate:.0f} Hz')
+    ax.grid()    
 
 def resample_data_drone(raw_data, hz=1e2, t_min_offset=0., t_max_offset=0.):
     # copy data (FIXME: may be unnecessary?)
