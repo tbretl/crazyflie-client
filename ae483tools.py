@@ -81,7 +81,7 @@ def resample_data_drone(raw_data, hz=1e2, t_min_offset=0., t_max_offset=0.):
     return resampled_data
 
 
-def resample_data_mocap(raw_data, t, t_shift=0.):
+def resample_data_mocap(raw_data, t, t_shift=0., t_min_offset=0.):
     # copy data (FIXME: may be unnecessary?) and convert lists to numpy arrays
     data = {}
     for key, val in raw_data.items():
@@ -96,6 +96,18 @@ def resample_data_mocap(raw_data, t, t_shift=0.):
     # remove nan
     for key, val in data.items():
         data[key] = val[i_is_valid]
+    
+    # do time offset
+    t_min = data['time'][0]
+    t_max = data['time'][-1]
+    if (t_min_offset < 0.) or (t_min_offset > t_max - t_min):
+        raise Exception(f't_min_offset = {t_min_offset:.4f} must be in [0, {t_max - t_min:.4f}]')
+    i_min = np.argwhere(data['time'] - t_min >= t_min_offset).flatten()
+    if len(i_min) == 0:
+        raise Exception(f't_min_offset = {t_min_offset:.4f} leaves no data (choose a smaller value)')
+    i_min = i_min[0]
+    for key, val in data.items():
+        data[key] = val[i_min:]
     
     # do time shift
     data['time'] -= (data['time'][0] - t_shift)
