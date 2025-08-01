@@ -32,7 +32,7 @@ class CrazyflieClient:
         self.use_observer = use_observer
         self.marker_deck_ids = marker_deck_ids
         self.variables = variables
-        self.cf = Crazyflie(rw_cache='./cache')
+        self.cf = Crazyflie(rw_cache='./__cfcache__')
         self.cf.connected.add_callback(self._connected)
         self.cf.fully_connected.add_callback(self._fully_connected)
         self.cf.connection_failed.add_callback(self._connection_failed)

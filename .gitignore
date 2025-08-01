@@ -210,5 +210,9 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,python,jupyternotebooks
 
-# Ignore folders with this name
+### AE 483 ###
+# Directory in which to put examples that should not be shared
 do_not_commit
+
+# Directory for the Crazyflie rw_cache
+__cfcache__
