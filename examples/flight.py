@@ -47,9 +47,9 @@ variables = [
     'stateEstimate.x',
     'stateEstimate.y',
     'stateEstimate.z',
-    'stateEstimate.roll',
-    'stateEstimate.pitch',
     'stateEstimate.yaw',
+    'stateEstimate.pitch',
+    'stateEstimate.roll',
 ]
 
 
