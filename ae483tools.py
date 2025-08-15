@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 def load_hardware_data(filename):
     with open(Path(filename), 'r') as f:
         data = json.load(f)
-        return data['drone'], data['mocap']
+        return data['drone'], data['mocap'], data['bodies']
 
 def check_mocap_coverage(filename):
     # Load data
-    raw_data_drone, raw_data_mocap = load_hardware_data(filename)
+    raw_data_drone, raw_data_mocap, raw_data_bodies = load_hardware_data(filename)
 
     # Compute statistics
     how_many_timesteps = len(raw_data_mocap['z'])
