@@ -172,7 +172,7 @@ def queue_handler(queue, callback):
 # CLIENT FOR QUALISYS
 
 class QualisysClient(Thread):
-    def __init__(self, bodies_to_track, ip_address='128.174.245.190', version='1.24'):
+    def __init__(self, bodies_to_track, ip_address='128.174.245.64', version='1.24'):
         """
         The argument
             
