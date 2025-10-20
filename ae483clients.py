@@ -10,7 +10,6 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 
 # Imports for qualisys (the motion capture system)
-import copy
 import asyncio
 import xml.etree.cElementTree as ET
 from threading import Thread
@@ -210,7 +209,12 @@ class QualisysClient(Thread):
         """
         Thread.__init__(self)
         self.ip_address = ip_address
-        self.bodies_to_track = copy.deepcopy(bodies_to_track)
+        self.bodies_to_track = bodies_to_track # <-- NOTE: This means that bodies_to_track will be
+                                               #           modified in place. That should be ok, but
+                                               #           you need to be careful in code that uses
+                                               #           QualisysClient. You also need to remember
+                                               #           this as a possible source of error if you
+                                               #           have any problem down the line with threads.
         self.version = version
         self.data = {}
         for body in self.bodies_to_track:
