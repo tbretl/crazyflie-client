@@ -80,6 +80,24 @@ class CrazyflieClient:
         else:
             self.cf.param.set_value('ae483par.use_observer', 0)
 
+        # Note that what we call the "default observer" will run
+        # regardless of whether or not use_observer is True - the
+        # parameter use_observer is only used to tell the custom
+        # controller whether or not to use the estimates from the
+        # default observer. 
+        #
+        # It is VERY IMPORTANT that the default observer be the
+        # Extended Kalman Filter (what is called the "kalman" type
+        # in the firmware code). Measurements are forwarded from
+        # this observer to ae483_controller.c so, if some other type
+        # of default observer is running, measurements will not be
+        # forwarded. In particular, without the flow deck, the default
+        # type of the default observer is "complementary" not "kalman."
+        # This will be a problem for projects that don't use the flow
+        # deck. So, we need to set the correct type of the default
+        # observer here, whether or not a custom observer is used.
+        self.cf.param.set_value('stabilizer.estimator', 2)
+
         # Start logging
         self.logconfs = []
         self.logconfs.append(LogConfig(name=f'LogConf0', period_in_ms=10))
