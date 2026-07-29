@@ -1,14 +1,9 @@
 ###################################
 # IMPORTS
 
-# Add parent directory to sys.path so that we can import from ae483clients
-import sys, os
-sys.path.append(os.path.abspath('..'))
-from ae483clients import CrazyflieClient, QualisysClient
-
-# Do all other imports
 import time
 import json
+from ae483clients import CrazyflieClient, QualisysClient
 
 
 ###################################
