@@ -29,7 +29,7 @@ marker_deck_ids = [91, 92, 93, 94]
 # -- MAY CHANGE FROM FLIGHT TO FLIGHT --
 
 # Specify whether or not to use the motion capture system
-use_mocap = True
+use_mocap = False
 
 # Specify whether or not to use a custom controller
 use_controller = False
