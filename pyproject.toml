@@ -1,7 +1,8 @@
 [project]
-name = "crazyflie-client"
-version = "0.1.0"
+name = "ae483"
+version = "2026.0"
 description = "Crazyflie client and analysis environment for AE483"
+readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
     "numpy",
@@ -14,15 +15,9 @@ dependencies = [
     "qtm-rt",
 ]
 
-[tool.uv]
-managed = true
+[project.scripts]
+ae483-reboot = "ae483.reboot:main"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build]
-include = [
-    "ae483clients.py",
-    "ae483tools.py"
-]
+requires = ["uv_build>=0.12.3,<0.13"]
+build-backend = "uv_build"

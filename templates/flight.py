@@ -3,7 +3,8 @@
 
 import time
 import json
-from ae483clients import CrazyflieClient, QualisysClient
+from ae483.clients import QualisysClient
+from ae483.myclients import MyCrazyflieClient
 
 
 ###################################
@@ -52,7 +53,7 @@ variables = [
 # FLIGHT CODE
 
 # Create and start the client that will connect to the drone
-drone_client = CrazyflieClient(
+drone_client = MyCrazyflieClient(
     uri,
     use_controller=use_controller,
     use_observer=use_observer,
