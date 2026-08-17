@@ -1,8 +1,8 @@
 ###################################
 # IMPORTS
 
-import time
 import json
+import os
 from ae483.clients import QualisysClient
 from ae483.myclients import MyCrazyflieClient
 
@@ -38,6 +38,9 @@ use_controller = False
 # Specify whether or not to use a custom observer
 use_observer = False
 
+# Specify the name of the file in which to save flight data
+data_filename = 'hardware_data.json'
+
 # Specify the variables you want to log at 100 Hz from the drone
 variables = [
     'stateEstimate.x',
@@ -61,39 +64,72 @@ drone_client = MyCrazyflieClient(
     variables=variables,
 )
 
-# Wait until the client is fully connected to the drone
-while not drone_client.is_fully_connected:
-    time.sleep(0.1)
+# Create this now so that it always exists, even if we never get far enough to
+# connect to the motion capture system
+mocap_client = None
 
-# Create and start the client that will connect to the motion capture system
-if use_mocap:
-    mocap_client = QualisysClient([{'name': marker_deck_name, 'callback': None}])
+# Everything from here until "finally" is what happens during your flight. If
+# anything goes wrong — including if you press Ctrl-C — the code in the
+# "finally" block still runs, stopping the motors, disarming the drone, and
+# disconnecting.
+try:
+    # Wait until the client is fully connected to the drone and until the state
+    # estimate has had time to converge
+    drone_client.wait_until_ready()
 
-# Pause before takeoff
-drone_client.stop(1.0)
+    # Create and start the client that will connect to the motion capture system
+    if use_mocap:
+        mocap_client = QualisysClient([{'name': marker_deck_name, 'callback': None}])
 
-#
-# FIXME: Insert move commands here to fly...
-#
-#   drone_client.move(0.0, 0.0, 0.3, 0.0, 1.0)
-#
+    # Arm the drone. Brushless drones will not spin their motors until they are
+    # armed. Brushed drones do not need to be armed, but arming them does no
+    # harm, so the same flight code works for both.
+    drone_client.arm()
 
-# Pause after landing
-drone_client.stop(1.0)
+    # Pause before takeoff
+    drone_client.stop(1.0)
 
-# Disconnect from the drone
-drone_client.disconnect()
+    #
+    # FIXME: Insert move commands here to fly...
+    #
+    #   drone_client.move(0.0, 0.0, 0.3, 0.0, 1.0)
+    #
 
-# Disconnect from the motion capture system
-if use_mocap:
-    mocap_client.close()
+    # Pause after landing
+    drone_client.stop(1.0)
 
-# Assemble flight data from both clients
-data = {}
-data['drone'] = drone_client.data
-data['mocap'] = mocap_client.data.get(marker_deck_name, {}) if use_mocap else {}
-data['bodies'] = mocap_client.data if use_mocap else {}
+except KeyboardInterrupt:
+    print('\nInterrupted — stopping the motors and saving whatever data were collected.')
 
-# Write flight data to a file
-with open('hardware_data.json', 'w') as outfile:
-    json.dump(data, outfile, sort_keys=False)
+finally:
+    # Stop the motors, disarm, and disconnect from the drone. Each step is
+    # guarded so that a failure in one of them cannot prevent the others — and,
+    # in particular, cannot prevent your flight data from being saved.
+    try:
+        drone_client.close()
+    except Exception as e:
+        print(f'Error while closing the connection to the drone: {e}')
+
+    # Disconnect from the motion capture system
+    if mocap_client is not None:
+        try:
+            mocap_client.close()
+        except Exception as e:
+            print(f'Error while closing the connection to the motion capture system: {e}')
+
+    # Assemble flight data from both clients
+    data = {}
+    data['drone'] = drone_client.data
+    data['mocap'] = mocap_client.data.get(marker_deck_name, {}) if use_mocap and mocap_client is not None else {}
+    data['bodies'] = mocap_client.data if use_mocap and mocap_client is not None else {}
+
+    # Write flight data to a file. We write to a temporary file first and then
+    # rename it, which is an operation the operating system does all at once.
+    # That way, if anything interrupts the writing, you are left with your
+    # previous data file rather than with a half-written one that cannot be
+    # read at all.
+    temporary_filename = data_filename + '.partial'
+    with open(temporary_filename, 'w') as outfile:
+        json.dump(data, outfile, sort_keys=False)
+    os.replace(temporary_filename, data_filename)
+    print(f'Wrote flight data to {data_filename}')
