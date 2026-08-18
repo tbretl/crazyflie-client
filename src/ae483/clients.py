@@ -320,6 +320,12 @@ class CrazyflieClient:
         """
         if not self._has_supervisor:
             return
+        if self.cf.supervisor.is_auto_armed:
+            # This drone arms itself, so a disarm request would be undone
+            # immediately and saying "Disarming" would be misleading. What
+            # actually stops the motors on such a drone is the stop setpoint,
+            # which close() sends just before calling this.
+            return
         print('CrazyflieClient: Disarming')
         self.cf.supervisor.send_arming_request(False)
 
