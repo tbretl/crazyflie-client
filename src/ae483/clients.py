@@ -289,10 +289,22 @@ class CrazyflieClient:
             message = ['CrazyflieClient: Your gains do not match the firmware on this drone.']
             if missing:
                 message.append(f'  The drone expects these, which your file does not have: {missing}')
-                message.append('  (Your gains file is probably older than your firmware.)')
             if extra:
                 message.append(f'  Your file has these, which the drone does not know about: {extra}')
-                message.append('  (Your firmware is probably older than your gains file - build and flash.)')
+            # Say what to do about it. All three of these can happen, and they
+            # need different answers - in particular, a change to the structure
+            # of your controller produces both lists at once, and telling
+            # somebody to build and flash in that case would be wrong.
+            if missing and extra:
+                message.append('  Your gains file was made for a different version of your')
+                message.append('  controller. Run export_gains in your analysis notebook to make')
+                message.append('  a new one, then run this script again.')
+            elif missing:
+                message.append('  Your gains file is older than your firmware. Run export_gains in')
+                message.append('  your analysis notebook to make a new one.')
+            else:
+                message.append('  Your firmware is older than your gains file. Build and flash it')
+                message.append('  again.')
             raise Exception('\n'.join(message))
 
         # Mark the gains as invalid while we are in the middle of sending them,
