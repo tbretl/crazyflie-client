@@ -15,6 +15,7 @@ not from your choice of Q and R. Q and R only change the numbers.
 import json
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 
@@ -175,7 +176,59 @@ def export_gains(K, structure, s, i, i_eq, filename='gains.json', verbose=True):
         for name, value in gains.items():
             print(f'  {name:{width}s} = {value: .8f}')
 
-    return contents
+
+def gains_as_text(gains, decimals=4):
+    """
+    Format control gains compactly, one line per input, in the same order they
+    appear in the equations of your controller.
+    """
+    # Work out the labels and column widths first, so that every line lines up.
+    # Each gain is named k_<input>_<state>, and the name of the input is known
+    # from the eq_<input> entry that comes just before its gains - so there is
+    # no need to guess where the name of the input ends and the state begins.
+    labels = {}
+    name_of_input = None
+    for name in gains:
+        if name.startswith('eq_'):
+            name_of_input = name[len('eq_'):]
+            labels[name] = 'eq'
+        else:
+            prefix = f'k_{name_of_input}_'
+            labels[name] = name[len(prefix):] if name.startswith(prefix) else name
+    label_width = max(len(x) for x in labels.values())
+    input_width = max(len(n[len('eq_'):]) for n in gains if n.startswith('eq_'))
+
+    lines, parts, name_of_input = [], [], None
+    for name, value in gains.items():
+        if name.startswith('eq_'):
+            if name_of_input is not None:
+                lines.append(f'{name_of_input:>{input_width}s}:  ' + '  '.join(parts))
+            name_of_input = name[len('eq_'):]
+            parts = []
+        parts.append(f'{labels[name]:>{label_width}s} {value:{decimals + 4}.{decimals}f}')
+    if name_of_input is not None:
+        lines.append(f'{name_of_input:>{input_width}s}:  ' + '  '.join(parts))
+    return '\n'.join(lines)
+
+
+def show_gains(filename, decimals=4):
+    """
+    Print the control gains that were used for a flight.
+    """
+    with open(Path(filename), 'r') as f:
+        data = json.load(f)
+    gains = data.get('gains', None)
+    created = data.get('gains_created', None)
+
+    if gains:
+        print(f'Control gains, designed {created}:' if created else 'Control gains:')
+        print(gains_as_text(gains, decimals=decimals))
+    elif data.get('use_controller', False):
+        print('WARNING: This flight was set up to use your controller, but no gains')
+        print('were recorded. That means the gains never reached the drone, so it')
+        print('would not have flown. Check the output of flight.py for an error.')
+    else:
+        print('This flight used the default controller, so there were no gains.')
 
 
 def show_controller(K, s, i, s_with_des, i_eq,
