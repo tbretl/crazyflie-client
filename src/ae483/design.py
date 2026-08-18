@@ -1,6 +1,6 @@
 """Tools for exporting a control design to the drone.
 
-The idea is that one thing — the *structure* of the controller — determines
+The idea is that one thing - the *structure* of the controller - determines
 everything else:
 
   * the names of the gains,
@@ -23,9 +23,10 @@ from scipy.sparse.csgraph import connected_components
 # a gain, which is what lets flight.py ask the drone which gains it expects.
 GAIN_GROUP = 'ae483gain'
 
-# A parameter name is sent as "group.name" and the total must fit in 28
-# characters (see the comment in controller_ae483.c).
-MAX_NAME_LENGTH = 28 - len(GAIN_GROUP) - 1
+# A parameter name is sent as "group.name" and the total must fit in this many
+# characters (see the comment above the parameter groups in controller_ae483.c).
+MAX_TOTAL_LENGTH = 28
+MAX_NAME_LENGTH = MAX_TOTAL_LENGTH - len(GAIN_GROUP) - 1
 
 
 def gain_structure(A, B, s, i, tol=1e-12):
@@ -34,7 +35,7 @@ def gain_structure(A, B, s, i, tol=1e-12):
 
     A, B are the matrices of the linearized model. s and i are lists of symbolic
     states and inputs. The result is derived from which states and inputs are
-    coupled in the model — so it does not depend on Q and R, and it does not
+    coupled in the model - so it does not depend on Q and R, and it does not
     depend on which gains happen to come out near zero for a particular design.
 
     For the usual AE483 model this returns the four decoupled subsystems:
@@ -93,10 +94,24 @@ def export_declarations(structure):
 
 def export_parameter_block(structure):
     """Print the C code that makes each gain a parameter. Paste this into
-    controller_ae483.c, at the bottom, with the other parameter groups."""
+    controller_ae483.c, at the bottom, with the other parameter groups.
+
+    The layout matches the parameter and log groups that are already in that
+    file. The group name, and the ruler comments above it, start just after
+    "PARAM_GROUP_START(". Each parameter name lines up with the word "name" in
+    the second ruler comment, and each pointer sits 25 characters after that.
+    """
+    group_column = len('PARAM_GROUP_START(')
+    name_column = group_column + len(GAIN_GROUP) + 1   # just past "group."
+    pointer_column = name_column + 25
+    ruler = ''.join(str((n + 1) % 10) for n in range(MAX_TOTAL_LENGTH))
+
+    print(f'//{" " * (group_column - 2)}{ruler} <-- max total length')
+    print(f'//{" " * (group_column - 2)}group{" " * max(1, len(GAIN_GROUP) - len("group"))}.name')
     print(f'PARAM_GROUP_START({GAIN_GROUP})')
     for name in gain_names(structure):
-        print(f'PARAM_ADD(PARAM_FLOAT, {name}, &{name})')
+        print(f'{"PARAM_ADD(PARAM_FLOAT,":<{name_column}}'
+              f'{name + ",":<{pointer_column - name_column}}&{name})')
     print(f'PARAM_GROUP_STOP({GAIN_GROUP})')
 
 
@@ -106,7 +121,7 @@ def export_controller(structure, s_with_des):
     controller_ae483.c, inside controllerAE483().
 
     The gains are named rather than written out as numbers, so this code does
-    not change when you redesign your controller — only the numbers sent by
+    not change when you redesign your controller - only the numbers sent by
     flight.py change. You only need to paste this again if the *structure*
     changes, e.g., when you add a model of time delay or integral action.
     """
@@ -170,7 +185,7 @@ def show_controller(K, s, i, s_with_des, i_eq,
     """
     Print the control law with its gains written out as numbers.
 
-    This is for reading and for your report — it shows what your design
+    This is for reading and for your report - it shows what your design
     actually is, and which gains are small enough to ignore. It is NOT what you
     paste into controller_ae483.c: that code uses named gains and comes from
     export_controller(), and the numbers themselves are sent by flight.py.

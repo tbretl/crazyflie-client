@@ -266,7 +266,7 @@ class CrazyflieClient:
         Send control gains to the drone, then read them back to confirm they
         arrived. Pass None if this flight does not use a custom controller.
 
-        The drone decides which gains it expects — every parameter in the
+        The drone decides which gains it expects - every parameter in the
         "ae483gain" group must be given a value, and nothing else may be. That
         way a mismatch between the firmware you flashed and the gains your
         notebook produced is caught here, on the ground, instead of in the air.
@@ -339,7 +339,7 @@ class CrazyflieClient:
         """
         Arm the drone. Brushless drones will not spin their motors until they
         are armed. Brushed drones do not require arming, but arming them anyway
-        is harmless — so flight code does not need to know which kind of drone
+        is harmless - so flight code does not need to know which kind of drone
         it is talking to.
         """
         if not self._has_supervisor:
@@ -418,7 +418,7 @@ class CrazyflieClient:
         """
         Ask the drone to recover from a crashed state, so that it can be armed
         again. This is what the "recover" button in cfclient does. It does NOT
-        help with a locked drone — power-cycle that one instead.
+        help with a locked drone - power-cycle that one instead.
         """
         if not self._has_supervisor:
             print('CrazyflieClient: Cannot recover (firmware does not support it)')
@@ -429,7 +429,7 @@ class CrazyflieClient:
     def emergency_stop(self):
         """
         Immediately stop all motors. The drone will fall. Use this only when a
-        drone is misbehaving and you want it to stop right now — for normal use,
+        drone is misbehaving and you want it to stop right now - for normal use,
         stop() and close() bring the drone down in a controlled way.
         """
         if not self._has_supervisor:

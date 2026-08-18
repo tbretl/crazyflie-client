@@ -64,11 +64,13 @@ variables = [
 # printed so that you notice if you are about to fly with gains from an
 # earlier design that you forgot to export.
 gains = None
+gains_created = None
 if gains_filename is not None:
     with open(gains_filename, 'r') as f:
         gains_file = json.load(f)
     gains = gains_file['gains']
-    print(f'Using {len(gains)} gains from {gains_filename}, written {gains_file["created"]}')
+    gains_created = gains_file['created']
+    print(f'Using {len(gains)} gains from {gains_filename}, written {gains_created}')
 
 # Create and start the client that will connect to the drone
 drone_client = MyCrazyflieClient(
@@ -143,6 +145,8 @@ finally:
     # data, so that every flight says for itself which controller flew it.
     data = {}
     data['gains'] = drone_client.gains
+    data['gains_created'] = gains_created if drone_client.gains is not None else None
+    data['use_controller'] = use_controller
     data['drone'] = drone_client.data
     data['mocap'] = mocap_client.data.get(marker_deck_name, {}) if use_mocap and mocap_client is not None else {}
     data['bodies'] = mocap_client.data if use_mocap and mocap_client is not None else {}
