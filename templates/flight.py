@@ -41,6 +41,11 @@ use_observer = False
 # Specify the name of the file in which to save flight data
 data_filename = 'hardware_data.json'
 
+# Specify the name of the file from which to read control gains, or None if
+# this flight does not use a custom controller. This file is written by your
+# design notebook.
+gains_filename = 'gains.json' if use_controller else None
+
 # Specify the variables you want to log at 100 Hz from the drone
 variables = [
     'stateEstimate.x',
@@ -54,6 +59,16 @@ variables = [
 
 ###################################
 # FLIGHT CODE
+
+# Read control gains, if this flight uses a custom controller. The date is
+# printed so that you notice if you are about to fly with gains from an
+# earlier design that you forgot to export.
+gains = None
+if gains_filename is not None:
+    with open(gains_filename, 'r') as f:
+        gains_file = json.load(f)
+    gains = gains_file['gains']
+    print(f'Using {len(gains)} gains from {gains_filename}, written {gains_file["created"]}')
 
 # Create and start the client that will connect to the drone
 drone_client = MyCrazyflieClient(
@@ -69,13 +84,20 @@ drone_client = MyCrazyflieClient(
 mocap_client = None
 
 # Everything from here until "finally" is what happens during your flight. If
-# anything goes wrong — including if you press Ctrl-C — the code in the
+# anything goes wrong - including if you press Ctrl-C - the code in the
 # "finally" block still runs, stopping the motors, disarming the drone, and
 # disconnecting.
 try:
     # Wait until the client is fully connected to the drone and until the state
     # estimate has had time to converge
     drone_client.wait_until_ready()
+
+    # Send the control gains to the drone and confirm they arrived. This does
+    # nothing if gains is None. It happens before the motion capture system is
+    # started so that as little time as possible passes between the start of
+    # motion capture data and the start of flight - the smaller that gap, the
+    # easier it is to align the two sets of data afterward.
+    drone_client.set_gains(gains)
 
     # Create and start the client that will connect to the motion capture system
     if use_mocap:
@@ -99,11 +121,11 @@ try:
     drone_client.stop(1.0)
 
 except KeyboardInterrupt:
-    print('\nInterrupted — stopping the motors and saving whatever data were collected.')
+    print('\nInterrupted - stopping the motors and saving whatever data were collected.')
 
 finally:
     # Stop the motors, disarm, and disconnect from the drone. Each step is
-    # guarded so that a failure in one of them cannot prevent the others — and,
+    # guarded so that a failure in one of them cannot prevent the others - and,
     # in particular, cannot prevent your flight data from being saved.
     try:
         drone_client.close()
@@ -117,8 +139,10 @@ finally:
         except Exception as e:
             print(f'Error while closing the connection to the motion capture system: {e}')
 
-    # Assemble flight data from both clients
+    # Assemble flight data from both clients. The gains are saved along with the
+    # data, so that every flight says for itself which controller flew it.
     data = {}
+    data['gains'] = drone_client.gains
     data['drone'] = drone_client.data
     data['mocap'] = mocap_client.data.get(marker_deck_name, {}) if use_mocap and mocap_client is not None else {}
     data['bodies'] = mocap_client.data if use_mocap and mocap_client is not None else {}

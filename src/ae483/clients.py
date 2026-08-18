@@ -30,6 +30,16 @@ cflib.crtp.init_drivers()
 # the radio and not by cflib.
 MIN_PROTOCOL_VERSION_FOR_SUPERVISOR = 12
 
+# The parameter group that holds control gains. Everything in this group is a
+# gain, which is what lets the client ask the drone which gains it expects
+# rather than having to be told.
+GAIN_GROUP = 'ae483gain'
+
+# The parameter that tells the firmware its gains have been set. Until this is
+# true, the ae483 controller should command zero thrust - so a drone that never
+# received its gains sits still instead of flipping over.
+GAINS_ARE_SET_PARAM = 'ae483par.gains_are_set'
+
 
 ###################################
 # CLIENT FOR CRAZYFLIE
@@ -56,6 +66,7 @@ class CrazyflieClient:
         # fails before _fully_connected is ever called.
         self.logconfs = []
         self.connection_error = None
+        self.gains = None
         self._is_closed = False
         self._has_supervisor = False
 
@@ -69,7 +80,7 @@ class CrazyflieClient:
 
     def _fully_connected(self, uri):
         # NOTE: This function runs in a callback thread, not in the thread that
-        # runs your flight script. Avoid long sleeps here — they delay the
+        # runs your flight script. Avoid long sleeps here - they delay the
         # handling of incoming packets. Anything slow belongs in
         # wait_until_ready(), which runs in the main thread.
 
@@ -230,7 +241,7 @@ class CrazyflieClient:
 
         # The value of idleThrust says which kind of drone the firmware was
         # built for. There is no need to tell this client which kind of drone
-        # you have — it asks the drone.
+        # you have - it asks the drone.
         try:
             idle_thrust = int(self.cf.param.get_value('powerDist.idleThrust', timeout=5))
         except Exception as e:
@@ -245,6 +256,80 @@ class CrazyflieClient:
         print(f'CrazyflieClient: If that is not the kind of drone you have, you have very likely')
         print(f'                 built and flashed firmware for the wrong platform. Stop and check')
         print(f'                 before you fly.')
+
+    #
+    # NEW: sending control gains
+    #
+
+    def set_gains(self, gains, tolerance=1e-6, timeout=2.):
+        """
+        Send control gains to the drone, then read them back to confirm they
+        arrived. Pass None if this flight does not use a custom controller.
+
+        The drone decides which gains it expects — every parameter in the
+        "ae483gain" group must be given a value, and nothing else may be. That
+        way a mismatch between the firmware you flashed and the gains your
+        notebook produced is caught here, on the ground, instead of in the air.
+        """
+        if gains is None:
+            return
+
+        declared = set(self.cf.param.toc.toc.get(GAIN_GROUP, {}).keys())
+        if not declared:
+            raise Exception(
+                f'CrazyflieClient: The firmware on this drone has no "{GAIN_GROUP}" '
+                f'parameters, so there is nowhere to put your gains. Did you paste the '
+                f'parameter block into controller_ae483.c, then build and flash?'
+            )
+
+        provided = set(gains.keys())
+        missing = sorted(declared - provided)
+        extra = sorted(provided - declared)
+        if missing or extra:
+            message = ['CrazyflieClient: Your gains do not match the firmware on this drone.']
+            if missing:
+                message.append(f'  The drone expects these, which your file does not have: {missing}')
+                message.append('  (Your gains file is probably older than your firmware.)')
+            if extra:
+                message.append(f'  Your file has these, which the drone does not know about: {extra}')
+                message.append('  (Your firmware is probably older than your gains file - build and flash.)')
+            raise Exception('\n'.join(message))
+
+        # Mark the gains as invalid while we are in the middle of sending them,
+        # so that an interrupted update cannot leave the drone armed with a
+        # mixture of old and new gains.
+        self.cf.param.set_value(GAINS_ARE_SET_PARAM, 0)
+
+        for name in sorted(declared):
+            self.cf.param.set_value(f'{GAIN_GROUP}.{name}', float(gains[name]))
+
+        # Read every gain back. Values are stored as 32-bit floats on the drone,
+        # so compare with a tolerance rather than for equality. The conversion
+        # from a 64-bit float costs at most 2**-24 (about 6e-8) in relative
+        # terms, so the default tolerance leaves a factor of about 17 - tight
+        # enough to notice a value that was rounded somewhere along the way, and
+        # loose enough never to complain about the conversion itself. Values of
+        # exactly zero convert exactly, so structural zeros always pass.
+        start_time = time.time()
+        while True:
+            wrong = []
+            for name in sorted(declared):
+                desired = float(gains[name])
+                actual = float(self.cf.param.get_value(f'{GAIN_GROUP}.{name}'))
+                if abs(actual - desired) > tolerance * max(1., abs(desired)):
+                    wrong.append((name, desired, actual))
+            if not wrong:
+                break
+            if time.time() - start_time > timeout:
+                lines = [f'CrazyflieClient: These gains did not arrive correctly:']
+                for name, desired, actual in wrong:
+                    lines.append(f'  {name}: sent {desired:.8f}, drone has {actual:.8f}')
+                raise Exception('\n'.join(lines))
+            time.sleep(0.1)
+
+        self.cf.param.set_value(GAINS_ARE_SET_PARAM, 1)
+        self.gains = dict(gains)
+        print(f'CrazyflieClient: Set and verified {len(declared)} gains')
 
     #
     # NEW: arming, disarming, and recovery
@@ -264,8 +349,8 @@ class CrazyflieClient:
         supervisor = self.cf.supervisor
 
         # Nothing to do if the drone is already armed. Brushed drones arm
-        # themselves at startup — their firmware is built without
-        # CONFIG_MOTORS_REQUIRE_ARMING — so this is the normal case for them.
+        # themselves at startup - their firmware is built without
+        # CONFIG_MOTORS_REQUIRE_ARMING - so this is the normal case for them.
         #
         # This check has to come first. "Can be armed" means "can *become*
         # armed," so it is false for a drone that is armed already, and testing
@@ -279,7 +364,7 @@ class CrazyflieClient:
 
         # A drone that has crashed refuses to arm until it is told to recover.
         if supervisor.is_crashed:
-            print('CrazyflieClient: The drone is in a crashed state — requesting recovery')
+            print('CrazyflieClient: The drone is in a crashed state - requesting recovery')
             supervisor.send_crash_recovery_request()
             time.sleep(0.5)
 
@@ -412,7 +497,7 @@ class CrazyflieClient:
         self._is_closed = True
 
         # Each step is guarded so that a failure in one of them does not
-        # prevent the others — in particular, we always want to disconnect.
+        # prevent the others - in particular, we always want to disconnect.
         if self.is_fully_connected:
             try:
                 self.cf.commander.send_stop_setpoint()
@@ -438,9 +523,9 @@ def queue_handler(queue, callback):
         pose = queue.get()
         if pose == 'END':
             break
-        # CHANGED: If the callback raises — which happens, for example, if the
+        # CHANGED: If the callback raises - which happens, for example, if the
         # drone has already been disconnected while the motion capture system is
-        # still streaming — this thread used to die silently and stop forwarding
+        # still streaming - this thread used to die silently and stop forwarding
         # poses. Now it complains and keeps going, so that it is still listening
         # for 'END' and can always be shut down.
         try:
@@ -491,7 +576,7 @@ class QualisysClient(Thread):
         """
         # CHANGED: daemon=True. A non-daemon thread that gets stuck (for
         # example, inside the motion capture connection) prevents python from
-        # exiting AND prevents atexit handlers from running — including the one
+        # exiting AND prevents atexit handlers from running - including the one
         # that disarms the drone. Making these threads daemons means a stuck
         # thread can never keep the drone armed or wedge your terminal.
         Thread.__init__(self, daemon=True)
@@ -534,7 +619,7 @@ class QualisysClient(Thread):
     def close(self, timeout=5.):
         # CHANGED: made safe to call more than once, so that it can go in a
         # "finally" block alongside CrazyflieClient.close(). Also, every join
-        # now has a timeout — this function must always return, even if a thread
+        # now has a timeout - this function must always return, even if a thread
         # is stuck somewhere we did not anticipate. The threads are daemons, so
         # anything still running when we give up cannot keep python alive.
         if self._is_closed:
