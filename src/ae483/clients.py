@@ -263,6 +263,20 @@ class CrazyflieClient:
 
         supervisor = self.cf.supervisor
 
+        # Nothing to do if the drone is already armed. Brushed drones arm
+        # themselves at startup — their firmware is built without
+        # CONFIG_MOTORS_REQUIRE_ARMING — so this is the normal case for them.
+        #
+        # This check has to come first. "Can be armed" means "can *become*
+        # armed," so it is false for a drone that is armed already, and testing
+        # it first would report a failure to arm a drone that is armed.
+        if supervisor.is_armed:
+            if supervisor.is_auto_armed:
+                print('CrazyflieClient: Already armed (this drone arms itself)')
+            else:
+                print('CrazyflieClient: Already armed')
+            return
+
         # A drone that has crashed refuses to arm until it is told to recover.
         if supervisor.is_crashed:
             print('CrazyflieClient: The drone is in a crashed state — requesting recovery')
