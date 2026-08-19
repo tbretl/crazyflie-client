@@ -13,6 +13,7 @@ import numpy as np
 from pathlib import Path
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
+import re
 
 
 def load_hardware_data(filename):
@@ -194,3 +195,64 @@ def only_in_flight(data_drone, data_mocap=None, t_interval=None):
 
         # Verify drone and mocap data are the same
         assert(np.allclose(data_drone['time'], data_mocap['time']))
+
+
+def mediaspace(url):
+    """
+    Show links to a video on Illinois Mediaspace.
+
+    The first link opens the player by itself, so what you get is just the
+    video and its sound. We link rather than embed because VS Code does not
+    allow embedded video in notebook output, and a link behaves the same way
+    in VS Code as it does in a browser.
+
+    The url can be any of the forms you get by copying from Mediaspace, e.g.
+
+        https://mediaspace.illinois.edu/media/t/1_arswdwxl
+        https://mediaspace.illinois.edu/media/t/1_arswdwxl/387663682
+        https://mediaspace.illinois.edu/media/1_arswdwxl?st=12
+    """
+    from IPython.display import display, HTML
+
+    entry_id = _mediaspace_entry_id(url)
+    player = f'https://mediaspace.illinois.edu/embed/secure/iframe/entryId/{entry_id}?st=0'
+
+    button = (
+        'display: inline-block; padding: 12px 22px; background: #E84A27; '
+        'color: #FFFFFF; font-size: 1.15em; font-weight: bold; '
+        'border-radius: 6px; text-decoration: none;'
+    )
+    small = 'font-size: 0.85em; color: #666666;'
+
+    display(HTML(
+        f'<div style="margin: 8px 0;">'
+        f'<a href="{player}" target="_blank" rel="noopener" style="{button}">'
+        f'&#9654;&nbsp; Play this video</a></div>'
+        f'<div style="{small}">'
+        f'<a href="{url}" target="_blank" rel="noopener" style="{small}">'
+        f'Open on Illinois Mediaspace instead</a></div>'
+    ))
+
+
+def _mediaspace_entry_id(url):
+    """
+    Find the entry id in a Mediaspace url. An entry id looks like 1_arswdwxl.
+    Anything after it (for example, the number identifying a playlist) is
+    ignored.
+    """
+    path = url.split('?')[0].split('#')[0]
+
+    match = re.search(r'/t/(\d+_[A-Za-z0-9]+)', path)
+    if match:
+        return match.group(1)
+
+    for part in path.split('/'):
+        if re.fullmatch(r'\d+_[A-Za-z0-9]+', part):
+            return part
+
+    raise ValueError(
+        f'Could not find a video id in this url:\n\n  {url}\n\n'
+        'Copy the url from the address bar while watching your video on '
+        'Illinois Mediaspace. It should contain something that looks like '
+        '"1_arswdwxl".'
+    )
