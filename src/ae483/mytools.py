@@ -16,5 +16,9 @@ def transform_data_mocap(*args, **kwargs):   # FIXME (Lab 2.5) — replace with 
     raise NotImplementedError('See Lab 2, step 2.5.')
 
 
+def precise_time_shift(*args, **kwargs):     # FIXME (Lab 2.6) — replace with your own signature
+    raise NotImplementedError('See Lab 2, step 2.6.')
+
+
 def sync_data_mocap(*args, **kwargs):        # FIXME (Lab 2.6) — replace with your own signature
     raise NotImplementedError('See Lab 2, step 2.6.')
