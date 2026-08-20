@@ -14,6 +14,7 @@ from pathlib import Path
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 import re
+from scipy.signal import correlate, correlation_lags
 
 
 def load_hardware_data(filename):
@@ -195,6 +196,34 @@ def only_in_flight(data_drone, data_mocap=None, t_interval=None):
 
         # Verify drone and mocap data are the same
         assert(np.allclose(data_drone['time'], data_mocap['time']))
+
+
+def rough_time_shift(raw_data_mocap, t, z_drone, t_min_offset=0.):
+    """
+    Find a value of t_shift that roughly aligns mocap data with
+    drone data by cross-correlation on z.
+    """
+
+    # Get time step
+    dt = t[1] - t[0]
+
+    # Resample mocap data with no time shift
+    resampled_data_mocap = resample_data_mocap(
+        raw_data_mocap,
+        t,
+        t_shift=0.,
+        t_min_offset=t_min_offset,
+    )
+
+    # Get z estimate (untransformed)
+    z_mocap = resampled_data_mocap['z']
+
+    # Do cross-correlation, subtracting the mean first so that a constant
+    # offset has no effect on the result.
+    correlation = correlate(z_drone - z_drone.mean(),
+                            z_mocap - z_mocap.mean(), mode='full')
+    lags = correlation_lags(z_drone.size, z_mocap.size, mode='full')
+    return lags[np.argmax(correlation)] * dt
 
 
 def mediaspace(url):
