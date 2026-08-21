@@ -22,12 +22,15 @@ from scipy.sparse.csgraph import connected_components
 
 # The name of the parameter group that holds gains. Everything in this group is
 # a gain, which is what lets flight.py ask the drone which gains it expects.
-GAIN_GROUP = 'ae483gain'
+GAIN_GROUP = 'ae483g'
 
-# A parameter name is sent as "group.name" and the total must fit in this many
-# characters (see the comment above the parameter groups in controller_ae483.c).
-MAX_TOTAL_LENGTH = 28
-MAX_NAME_LENGTH = MAX_TOTAL_LENGTH - len(GAIN_GROUP) - 1
+# A parameter is sent as the group and the name, each null-terminated, in the
+# 30 bytes of a CRTP packet - of which 4 are already used by the command, the
+# id, and the type. That leaves 26 bytes for both strings and both terminators,
+# so the group and the name together can be no longer than this. (Note that the
+# dot you see in "group.name" is added by the client and is not transmitted.)
+MAX_TOTAL_LENGTH = 24
+MAX_NAME_LENGTH = MAX_TOTAL_LENGTH - len(GAIN_GROUP)
 
 
 def gain_structure(A, B, s, i, tol=1e-12):
@@ -105,7 +108,7 @@ def export_parameter_block(structure):
     group_column = len('PARAM_GROUP_START(')
     name_column = group_column + len(GAIN_GROUP) + 1   # just past "group."
     pointer_column = name_column + 25
-    ruler = ''.join(str((n + 1) % 10) for n in range(MAX_TOTAL_LENGTH))
+    ruler = ''.join(str((n + 1) % 10) for n in range(MAX_TOTAL_LENGTH + 1))
 
     print(f'//{" " * (group_column - 2)}{ruler} <-- max total length')
     print(f'//{" " * (group_column - 2)}group{" " * max(1, len(GAIN_GROUP) - len("group"))}.name')

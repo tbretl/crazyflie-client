@@ -33,7 +33,7 @@ MIN_PROTOCOL_VERSION_FOR_SUPERVISOR = 12
 # The parameter group that holds control gains. Everything in this group is a
 # gain, which is what lets the client ask the drone which gains it expects
 # rather than having to be told.
-GAIN_GROUP = 'ae483gain'
+GAIN_GROUP = 'ae483g'
 
 # The parameter that tells the firmware its gains have been set. Until this is
 # true, the ae483 controller should command zero thrust - so a drone that never
@@ -267,7 +267,7 @@ class CrazyflieClient:
         arrived. Pass None if this flight does not use a custom controller.
 
         The drone decides which gains it expects - every parameter in the
-        "ae483gain" group must be given a value, and nothing else may be. That
+        "ae483g" group must be given a value, and nothing else may be. That
         way a mismatch between the firmware you flashed and the gains your
         notebook produced is caught here, on the ground, instead of in the air.
         """
