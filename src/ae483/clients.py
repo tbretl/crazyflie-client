@@ -323,6 +323,7 @@ class CrazyflieClient:
         # loose enough never to complain about the conversion itself. Values of
         # exactly zero convert exactly, so structural zeros always pass.
         start_time = time.time()
+        fewest_wrong = None
         while True:
             wrong = []
             for name in sorted(declared):
@@ -332,6 +333,14 @@ class CrazyflieClient:
                     wrong.append((name, desired, actual))
             if not wrong:
                 break
+            # Gains are sent one at a time - the client waits for the drone to
+            # echo each one back before sending the next - so this takes longer
+            # with more gains, and longer still over a busy or lossy radio link.
+            # Keep waiting as long as gains are still arriving, and give up only
+            # when none has arrived for "timeout" seconds.
+            if fewest_wrong is None or len(wrong) < fewest_wrong:
+                fewest_wrong = len(wrong)
+                start_time = time.time()
             if time.time() - start_time > timeout:
                 lines = [f'CrazyflieClient: These gains did not arrive correctly:']
                 for name, desired, actual in wrong:
