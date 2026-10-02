@@ -261,7 +261,7 @@ class CrazyflieClient:
     # NEW: sending control gains
     #
 
-    def set_gains(self, gains, tolerance=1e-6, timeout=2.):
+    def set_gains(self, gains, tolerance=1e-6, timeout=10.):
         """
         Send control gains to the drone, then read them back to confirm they
         arrived. Pass None if this flight does not use a custom controller.
@@ -334,10 +334,13 @@ class CrazyflieClient:
             if not wrong:
                 break
             # Gains are sent one at a time - the client waits for the drone to
-            # echo each one back before sending the next - so this takes longer
-            # with more gains, and longer still over a busy or lossy radio link.
-            # Keep waiting as long as gains are still arriving, and give up only
-            # when none has arrived for "timeout" seconds.
+            # echo each one back before sending the next, resending every 0.2
+            # seconds until it does - so a single gain can take a long time on a
+            # busy or lossy radio link. Keep waiting as long as gains are still
+            # arriving, and give up only when none has arrived for "timeout"
+            # seconds. There is no need for that bound to be tight: firmware
+            # that does not match your gains was already caught above, so the
+            # only thing left to go wrong here is the radio.
             if fewest_wrong is None or len(wrong) < fewest_wrong:
                 fewest_wrong = len(wrong)
                 start_time = time.time()
